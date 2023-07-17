@@ -1,5 +1,6 @@
 from time import sleep
 import can
+import threading 
 
 
 class CanBus:
@@ -22,6 +23,17 @@ class CanBus:
                 if message is not None:
                     for byte in message.data:
                         decimal_array.append(byte)
-                    print("Message: ", decimal_array)
+                    process_can_bus_thread = threading.Thread(target=self.process_can_bus_data, args=(decimal_array,))
+                    process_can_bus_thread.start()
         except KeyboardInterrupt:
             self.bus_.shutdown()
+    
+    def process_can_bus_data(self, data):
+        if data[0] == 0:
+            rpm = data[1] * 256 + data[2]
+            wtemp = data[3]
+            tps = data[4] * 256 + data[5]
+
+            print("RPM: ", rpm, " WATERTEMP: ", wtemp, "TPS: ", tps)
+        elif data[0] == 1:
+            print("")  
