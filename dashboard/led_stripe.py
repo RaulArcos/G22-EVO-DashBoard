@@ -1,30 +1,55 @@
-import board
-import neopixel
-import time
+import array, time
+from machine import Pin
+import rp2
+from rp2 import PIO, StateMachine, asm_pio
 
-# Configure the LED strip
-LED_COUNT = 144    # Change this to the number of LEDs in your strip
-LED_PIN = board.MOSI   # GPIO pin connected to the LED strip
-LED_BRIGHTNESS = 0.2  # Set the brightness (0.0 to 1.0)
-ORDER = neopixel.RGB  # RGB or GRB, depending on the LED strip configuration
+# Configure the number of WS2812 LEDs.
+NUM_LEDS = 144
 
-pixels = neopixel.NeoPixel(LED_PIN, LED_COUNT, brightness=LED_BRIGHTNESS, auto_write=False, pixel_order=ORDER)
+@asm_pio(sideset_init=PIO.OUT_LOW, out_shiftdir=PIO.SHIFT_LEFT, autopull=True, pull_thresh=24)
+def ws2812():
+    T1 = 2
+    T2 = 5
+    T3 = 3
+    label("bitloop")
+    out(x, 1) .side(0) [T3 -1]
+    jmp(not_x, "do_zero") .side(1) [T1 -1]
+    jmp("bitloop") .side(1) [T2 - 1]
+    label("do_zero")
+    nop() .side(0) [T2 - 1]
+    
+# Create the StateMachine with the ws2812 program
+sm = StateMachine(0, ws2812,freq=8000000, sideset_base=Pin(0))
 
-def set_led_color(led_index, color):
-    pixels[led_index] = color
-    pixels.show()
+#Start the StateMachine, it will wait for data on its FIFO
+sm.active(1)
 
-def clear_leds():
-    pixels.fill((0, 0, 0))
-    pixels.show()
+ar = array.array("I", [0 for _ in range (NUM_LEDS)])
 
-if __name__ == "__main__":
-    try:
-        # Example: Set all LEDs to orange
-        clear_leds()
-        for i in range(LED_COUNT):
-            set_led_color(i, (255, 165, 0))  # RGB color for orange
-            time.sleep(0.1)
+print("blue")
+for j in range (0,255):
+    for i in range (NUM_LEDS):
+        ar[i] = j
+    sm.put(ar,8)
+    time.sleep_ms(10)
 
-    except KeyboardInterrupt:
-        clear_leds()
+print("red")
+for j in range (0,255):
+    for i in range (NUM_LEDS):
+        ar[i] = j<<8
+    sm.put(ar,8)
+    time.sleep_ms(10)
+
+print("green")
+for j in range (0,255):
+    for i in range (NUM_LEDS):
+        ar[i] = j<<16
+    sm.put(ar,8)
+    time.sleep_ms(10)
+
+print("white")
+for j in range (0,255):
+    for i in range (NUM_LEDS):
+        ar[i] = (j<<16) + (j<<8) + j
+    sm.put(ar,8)
+    time.sleep_ms(10)
