@@ -1,6 +1,7 @@
 from gps import GPS
 from can_bus import CanBus
 from excel_manager import ExcelManager
+from dash_screen_controller import DashScreenController
 import datetime
 import threading
 import os

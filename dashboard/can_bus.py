@@ -1,9 +1,15 @@
 from time import sleep
 import can
 import threading 
+from dash_screen_data_id import DashScreenDataId
+from dash_screen_controller import DashScreenController
 
 
 class CanBus:
+
+    def __init__(self):
+        self.dsc = DashScreenController()
+
 
     def connect_can_bus(self, channel, bustype):
         try:
@@ -12,6 +18,7 @@ class CanBus:
         except OSError as e:
             print(e)
             print("No encontré el CAN_BUS, reintentando...")
+            self.dsc.send_screen_data(DashScreenDataId.RPM, 2000)
             sleep(1)
             self.connect_can_bus(channel, bustype)
 
@@ -31,6 +38,7 @@ class CanBus:
     def process_can_bus_data(self, data):
         if data[0] == 0:
             rpm = data[1] * 256 + data[2]
+            self.dsc.send_screen_data(DashScreenDataId.RPM, 2000)
             wtemp = data[3]
             tps = data[4] * 256 + data[5]
 
